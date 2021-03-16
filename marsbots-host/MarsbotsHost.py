@@ -1,6 +1,8 @@
 import pygame
 from RemoteRobot import RemoteRobot
 from Command import Command
+import threading
+import apihost
 
 # Connect to the EV3s
 blueRobot = RemoteRobot('00:17:E9:B2:8A:AF')  # BLUE
@@ -122,6 +124,9 @@ def use_joystick(joystick):
 
     return left_stick, right_stick, pressed
 
+
+server = threading.Thread(target=apihost.run_server, daemon=True)
+server.start()
 
 pygame.init()
 
