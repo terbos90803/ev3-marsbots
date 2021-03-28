@@ -7,9 +7,11 @@ import apihost
 # Connect to the EV3s
 blueRobot = RemoteRobot('00:17:E9:B2:8A:AF')  # BLUE
 yellowRobot = RemoteRobot('00:17:EC:F6:16:26')  # YELLOW
+ssci25 = RemoteRobot('00:17:E9:B3:E3:57')
 
-blueRobot.connect()
-yellowRobot.connect()
+#blueRobot.connect()
+#yellowRobot.connect()
+ssci25.connect()
 
 # Define some colors
 BLACK = pygame.Color(0, 0, 0)
