@@ -1,6 +1,6 @@
 import bluetooth
 import pickle
-from Command import Command
+from command import Command
 
 
 class RemoteRobot:

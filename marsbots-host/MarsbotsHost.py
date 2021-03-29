@@ -1,17 +1,17 @@
-import pygame
-from RemoteRobot import RemoteRobot
-from Command import Command
 import threading
-import apihost
+import api_host
+import control_gui
 
-# Connect to the EV3s
-blueRobot = RemoteRobot('00:17:E9:B2:8A:AF')  # BLUE
-yellowRobot = RemoteRobot('00:17:EC:F6:16:26')  # YELLOW
-ssci25 = RemoteRobot('00:17:E9:B3:E3:57')
 
-#blueRobot.connect()
-#yellowRobot.connect()
-ssci25.connect()
+control_gui.setup()
+
+server = threading.Thread(target=api_host.run_server, daemon=True)
+server.start()
+
+control_gui.run_game()
+
+exit(0)
+
 
 # Define some colors
 BLACK = pygame.Color(0, 0, 0)
@@ -126,9 +126,6 @@ def use_joystick(joystick):
 
     return left_stick, right_stick, pressed
 
-
-server = threading.Thread(target=apihost.run_server, daemon=True)
-server.start()
 
 pygame.init()
 
