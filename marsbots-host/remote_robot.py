@@ -1,6 +1,5 @@
 import bluetooth
 import pickle
-from command import Command
 
 
 class RemoteRobot:
@@ -24,7 +23,7 @@ class RemoteRobot:
 
     def close(self):
         if self.s is not None:
-            self.send_command(Command(0, 0, 0))
+            self.send_command(None)
             if self.s is not None:
                 self.s.close()
             self.s = None

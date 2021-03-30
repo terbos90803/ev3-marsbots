@@ -1,5 +1,5 @@
 import flask
-from flask import request, jsonify
+from flask import request
 import core
 
 app = flask.Flask("MarsbotsServer")
@@ -15,8 +15,7 @@ def home():
 @app.route('/robots', methods=['GET'])
 def get_valid_robots():
     first_robot, last_robot = core.get_valid_robots()
-    robots = {'status': 'ok', 'first_robot': first_robot, 'last_robot': last_robot}
-    return jsonify(robots)
+    return {'status': 'ok', 'first_robot': first_robot, 'last_robot': last_robot}
 
 
 @app.route('/robot', methods=['POST'])
@@ -34,7 +33,8 @@ def register_robot():
 
 @app.route('/sol', methods=['GET'])
 def get_sol():
-    return {'status': 'ok', 'sol': '1.0', 'total_sols': '10.0', 'mins_per_sol': '3.0'}
+    sol_now, total_sols, mins_per_sol = core.get_sol()
+    return {'status': 'ok', 'sol': sol_now, 'total_sols': total_sols, 'mins_per_sol': mins_per_sol}
 
 
 @app.route('/plan', methods=['POST'])
@@ -43,14 +43,12 @@ def set_plan():
     if form_robot is not None:
         robot = int(form_robot)
         plan = request.form.get('plan')
+        delay = core.queue_plan(robot, plan)
         if plan is not None:
-            # submit plan, get delay
             app.logger.debug(f'plan:{request.form}')
-            return {'status': 'ok', 'delay': 10}
         else:
-            # flag a rescue, get delay
             app.logger.debug(f'rescue:{request.form}')
-            return {'status': 'ok', 'delay': 10}
+        return {'status': 'ok', 'delay': delay}
     return {'status': 'fail', 'reason': 'Missing robot id'}
 
 

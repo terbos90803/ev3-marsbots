@@ -64,7 +64,7 @@ def _robot_pane(number, last_robot):
         [sg.Button('Connected', key=_connected_key(number), pad=(10, 10)),
          sg.Button('Release', key=_release_key(number), pad=(10, 10), disabled=True)],
         [sg.Column([
-            [sg.Button('Rescue', size=(15, 1), key=_rescue_key(number), pad=(20, 10))]
+            [sg.Button(f'Rescue {number}', size=(15, 1), key=_rescue_key(number), pad=(20, 10), disabled=True)]
         ], justification='center')]
     ]
     return sg.Frame(f'Robot {number}', layout, visible=enable, border_width=1, pad=(20, 10))
@@ -80,7 +80,7 @@ def display_game():
         [sg.Text(f"Number of robots: {last_robot}", size=(40, 1), justification='left'),
          sg.Text(f"Public IP: {public_ip}", size=(40, 1), justification='right')],
         [sg.Column([[sg.Text(size=(20, 1), key=_sol_key, font=('Sans', 24), justification='center')]],
-                   justification='c')],
+                   justification='center')],
 
         [sg.Column([
             [_robot_pane(1, last_robot), _robot_pane(2, last_robot), _robot_pane(3, last_robot)],
@@ -98,8 +98,10 @@ def run_game():
 
     running = True
     while running:
+        core.process_queue()
+
         # Update Sol timer
-        sol_now, sol_total = core.get_sol()
+        sol_now, sol_total, mins_per_sol = core.get_sol()
         if sol_now > sol_total + 1:
             break
         _window[_sol_key].update(f'Sol {sol_now:.1f} of {sol_total:.0f}')
@@ -107,11 +109,15 @@ def run_game():
         # Manage Button state
         flash = not flash
         for ix in range(first_robot, last_robot + 1):
+            # connected
             color = ('green', None) if core.get_connected(ix) else ('red', None)
             _window[_connected_key(ix)].update(button_color=color)
-            light = flash and core.get_rescue(ix)
+            # rescue
+            rescue = core.get_rescue(ix)
+            light = flash and rescue
             color = ('white', 'red') if light else None
-            _window[_rescue_key(ix)].update(button_color=color)
+            _window[_rescue_key(ix)].update(button_color=color, disabled=not rescue)
+            # release
             _window[_release_key(ix)].update(disabled=not core.get_taken(ix))
 
         # Wait for window events
@@ -122,10 +128,10 @@ def run_game():
 
         # Process any other events
         if event not in (sg.TIMEOUT_EVENT, sg.WIN_CLOSED):
-            print('============ Event = ', event, ' ==============')
-            print('-------- Values Dictionary (key=value) --------')
-            for key in values:
-                print(key, ' = ', values[key])
+            # print('============ Event = ', event, ' ==============')
+            # print('-------- Values Dictionary (key=value) --------')
+            # for key in values:
+            #     print(key, ' = ', values[key])
 
             key_split = event.strip('-').split('-')
             print(key_split)

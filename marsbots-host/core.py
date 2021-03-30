@@ -2,7 +2,6 @@ import threading
 import time
 
 from remote_robot import RemoteRobot
-from command import Command
 
 
 _robot_macs = [
@@ -21,6 +20,7 @@ _game_sols = 0
 _short_trip = 0
 _long_trip = 0
 _mins_per_sol = 0
+_delay_scale = 0
 
 # Active robots
 _active_robots = []
@@ -30,6 +30,9 @@ _sol_rt_base = 0.0
 
 # Thread safety
 _lock = threading.Lock()
+
+# Event queue
+_queue = []
 
 
 class _Robot:
@@ -41,7 +44,7 @@ class _Robot:
 
 
 def configure(number_robots, minutes, sols, short_trip, long_trip):
-    global _last_robot, _game_minutes, _game_sols, _short_trip, _long_trip, _mins_per_sol
+    global _last_robot, _game_minutes, _game_sols, _short_trip, _long_trip, _mins_per_sol, _delay_scale
     _last_robot = min(number_robots, len(_robot_macs))
     _game_minutes = minutes
     _game_sols = sols
@@ -49,6 +52,8 @@ def configure(number_robots, minutes, sols, short_trip, long_trip):
     _long_trip = long_trip
 
     _mins_per_sol = _game_minutes / _game_sols
+    delay_range = _long_trip - _short_trip  # delay range in seconds
+    _delay_scale = float(delay_range) / float(_game_minutes * 60)  # scale from game seconds to light delay
 
 
 def activate_robots():
@@ -70,7 +75,13 @@ def get_sol():
     # Update the Sol timer
     mins = (time.time() - _sol_rt_base) / 60.0
     sol_now = 1 + mins / _mins_per_sol
-    return sol_now, _game_sols
+    return sol_now, _game_sols, _mins_per_sol
+
+
+def get_light_delay():
+    # Calculate the roundtrip light time from Earth to Mars
+    secs = time.time() - _sol_rt_base  # game time in seconds
+    return secs * _delay_scale + _short_trip
 
 
 def get_connected(number):
@@ -128,3 +139,36 @@ def get_taken(number):
         if number < len(_active_robots):
             return _active_robots[number].taken
     return False
+
+
+def queue_plan(number, plan):
+    global _queue
+    delay = get_light_delay()
+    due = time.time() + delay
+    with _lock:
+        _queue.append((due, number, plan))
+    return delay
+
+
+def process_queue():
+    global _queue
+    now = time.time()
+    q = []
+    with _lock:
+        while len(_queue) > 0 and _queue[0][0] <= now:
+            q.append(_queue.pop(0))
+
+    # We have quickly moved the due elements from the global queue to the local one
+    for e in q:
+        number = e[1]
+        plan = e[2]
+        if plan is None:
+            set_rescue(number)
+        else:
+            _send_plan(number, plan)
+
+
+def _send_plan(number, plan):
+    number -= 1
+    robot = _active_robots[number].robot
+    robot.send_command(plan)
