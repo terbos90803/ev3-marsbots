@@ -23,11 +23,10 @@ def get_valid_robots():
 def register_robot():
     if 'robot' in request.form:
         robot = int(request.form['robot'])
-        # TODO validate robot id
-        if False:
-            app.logger.error(f'Duplicate robot registration:{robot}')
-            return {'status': 'fail', 'reason': 'Number already taken'}
-        return {'status': 'ok'}
+        if core.take_robot(robot):
+            return {'status': 'ok'}
+        app.logger.error(f'Duplicate robot registration:{robot}')
+        return {'status': 'fail', 'reason': 'Number already taken'}
     else:
         app.logger.error('Missing robot id for registration')
         return {'status': 'fail', 'reason': 'Missing robot id'}

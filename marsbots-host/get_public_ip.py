@@ -22,8 +22,8 @@ def _get(endpoint, attrs=dict()):
 
 
 def get_public_ip():
-    resp = _get('/', {'format': 'json'})
-    if resp is not None:
-        return resp['ip']
+    ip = _get('/', {'format': 'json'}).get('ip')
+    if ip is not None:
+        return ip
     else:
         return 'unknown'

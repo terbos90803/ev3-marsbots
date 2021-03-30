@@ -37,4 +37,3 @@ class RemoteRobot:
             except OSError:
                 self.s = None
                 print('Robot disconnected', self.robot_mac_addr)
-
