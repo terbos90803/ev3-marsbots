@@ -134,11 +134,13 @@ def run_game():
             #     print(key, ' = ', values[key])
 
             key_split = event.strip('-').split('-')
-            print(key_split)
             if len(key_split) == 3 and key_split[0] == 'ROBOT':
                 number = int(key_split[2])
                 if key_split[1] == 'CONNECTED':
-                    core.reconnect(number)
+                    if core.get_connected(number):
+                        core.disconnect(number)
+                    else:
+                        core.reconnect(number)
                 elif key_split[1] == 'RELEASE':
                     core.release_robot(number)
                 elif key_split[1] == 'RESCUE':

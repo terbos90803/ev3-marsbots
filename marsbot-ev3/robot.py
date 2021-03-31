@@ -6,27 +6,57 @@ SSCI SoccerBot robot server
 import sys
 import subprocess
 import bluetooth
-from Command import Command
+import pickle
+import json
+
 from ev3dev2 import DeviceNotFound
-from ev3dev2.motor import MediumMotor, LargeMotor, OUTPUT_A, OUTPUT_B, OUTPUT_C
+from ev3dev2.motor import MediumMotor, MoveSteering, SpeedPercent, OUTPUT_A, OUTPUT_B, OUTPUT_C
 from ev3dev2.led import Led, Leds
 from ev3dev2.display import Display
 from Screen import init_console, reset_console, debug_print
 
 
+FORWARD = u'\u2191' # up-arrow glyph
+REVERSE = u'\u2193' # down-arrow glyph
+LEFT = u'\u2190' # left-arrow glyph
+RIGHT = u'\u2192' # right-arrow glyph
+GRAB = 'Grab'
+RELEASE = 'Release'
+
+driveSpeed = 35
+turnSpeed = 35
+grabSpeed = 20
+
 init_console()
 
 # get handles for the three motors
 try:
-    kickMotor = MediumMotor(OUTPUT_A)
-    rightMotor = LargeMotor(OUTPUT_B)
-    leftMotor = LargeMotor(OUTPUT_C)
+    grabMotor = MediumMotor(OUTPUT_A)
+    steeringDrive = MoveSteering(OUTPUT_B, OUTPUT_C)
 except DeviceNotFound as error:
     print("Motor not connected")
     print("Check and restart")
     print(error)
     while True:
         pass
+
+
+def move(value):
+    steeringDrive.on_for_rotations(0, driveSpeed, 1.0 * value)
+
+
+def turn(value):
+    steering = -100 if value < 0 else 100
+    steeringDrive.on_for_rotations(steering, turnSpeed, 0.6 * abs(value))
+
+
+def grab():
+    grabMotor.on_for_seconds(speed=-grabSpeed, seconds=1, brake=False)
+
+
+def release():
+    grabMotor.on_for_seconds(speed=grabSpeed, seconds=1, brake=False)
+
 
 leds = Leds()
 #debug_print(Led().triggers)
@@ -37,7 +67,6 @@ display = Display()
 screenw = display.xres
 screenh = display.yres
 
-# hostMACAddress = '00:17:E9:B2:8A:AF' # The MAC address of a Bluetooth adapter on the server. The server might have multiple Bluetooth adapters.
 # Fetch BT MAC address automatically
 cmd = "hciconfig"
 device_id = "hci0"
@@ -46,13 +75,8 @@ hostMACAddress = sp_result.stdout.split("{}:".format(device_id))[1].split("BD Ad
 debug_print (hostMACAddress)
 print (hostMACAddress)
 
-# reset the kick motor to a known good position
-kickMotor.on_for_seconds(speed=-10, seconds=0.5)
-kickMotor.on_for_seconds(speed=10, seconds=2, brake=False)
-kickMotor.reset()
-kicking = False
-kick_power = 0
-max_kick = 1000
+# reset the grab motor to a known good position
+release()
 
 port = 3  # port number is arbitrary, but must match between server and client
 backlog = 1
@@ -60,6 +84,8 @@ size = 1024
 s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 s.bind((hostMACAddress, port))
 s.listen(backlog)
+
+# Main loop handles connections to the host
 while True:
     try:
         reset_console()
@@ -72,29 +98,36 @@ while True:
         leds.set_color('LEFT', 'GREEN')
         leds.set_color('RIGHT', 'GREEN')
 
+        # Driving loop
         while True:
             data = client.recv(size)
             if data:
                 #print(data, file=sys.stderr)
-                cmd = Command.unpickled(data)
+                #print(pickle.DEFAULT_PROTOCOL, file=sys.stderr)
+                jd = pickle.loads(data)
+                sequence = json.loads(jd)
 
-                if cmd:
-                    leftMotor.on(speed=cmd.left_drive)
-                    rightMotor.on(speed=cmd.right_drive)
-                    do_kick = cmd.do_kick > 0
-                    if do_kick != kicking:
-                        kicking = do_kick
-                        if do_kick:
-                            kickMotor.run_to_abs_pos(position_sp=-100, speed_sp=kick_power*max_kick//screenh, stop_action="hold")
-                            kick_power = kick_power - (25 if kick_power > 25 else kick_power)
-                        else:
-                            kickMotor.run_to_abs_pos(position_sp=-10, speed_sp=200, stop_action="coast")
-
-                    kick_power = kick_power + (1 if kick_power < screenh else 0)
-                    display.rectangle(x1=0, y1=0, x2=screenw, y2=kick_power)
-                    display.update()
-
+                # command format: [[cmd, value], ...]
+                #print(sequence, file=sys.stderr)
+                if isinstance(sequence, list):
+                    for step in sequence:
+                        #print(step, file=sys.stderr)
+                        cmd = step[0]
+                        #print(cmd, file=sys.stderr)
+                        value = float(step[1]) if len(step) > 1 else 0.0
+                        #print(value, file=sys.stderr)
+                        if cmd == FORWARD:
+                            move(value)
+                        elif cmd == REVERSE:
+                            move(-value)
+                        elif cmd == LEFT:
+                            turn(-value)
+                        elif cmd == RIGHT:
+                            turn(value)
+                        elif cmd == GRAB:
+                            grab()
+                        elif cmd == RELEASE:
+                            release()
     except:
-        #print("Closing socket")
         client.close()
 s.close()

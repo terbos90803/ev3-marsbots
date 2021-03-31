@@ -5,7 +5,7 @@ import pickle
 class RemoteRobot:
     def __init__(self, robot_mac_addr):
         self.robot_mac_addr = robot_mac_addr
-        self.port = 3
+        self.port = 3  # port number is arbitrary, but must match between server and client
         self.s = None
 
     def connect(self):
@@ -30,7 +30,7 @@ class RemoteRobot:
 
     def send_command(self, command):
         if self.s is not None:
-            data = pickle.dumps(command)
+            data = pickle.dumps(command, protocol=3)
             try:
                 self.s.send(data)
             except OSError:

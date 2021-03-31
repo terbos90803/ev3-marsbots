@@ -95,6 +95,12 @@ def reconnect(number):
         _active_robots[number].robot.connect()
 
 
+def disconnect(number):
+    number -= 1
+    if number < len(_active_robots):
+        _active_robots[number].robot.close()
+
+
 def get_rescue(number):
     number -= 1
     return _active_robots[number].rescue if number < len(_active_robots) else False
