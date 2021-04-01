@@ -51,11 +51,11 @@ def turn(value):
 
 
 def grab():
-    grabMotor.on_for_seconds(speed=-grabSpeed, seconds=1, brake=False)
+    grabMotor.on_for_seconds(speed=-grabSpeed, seconds=1.5, brake=False)
 
 
 def release():
-    grabMotor.on_for_seconds(speed=grabSpeed, seconds=1, brake=False)
+    grabMotor.on_for_seconds(speed=grabSpeed, seconds=1.5, brake=False)
 
 
 leds = Leds()

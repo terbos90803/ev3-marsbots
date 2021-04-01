@@ -6,11 +6,11 @@ from remote_robot import RemoteRobot
 
 _robot_macs = [
     '00:17:E9:B3:E3:57',  # SSCI-25
-    '00:17:E9:B3:E3:57',  # SSCI-26
-    '00:17:E9:B3:E3:57',  # SSCI-27
-    '00:17:E9:B3:E3:57',  # SSCI-29
-    '00:17:E9:B3:E3:57',  # SSCI-32
-    '00:17:E9:B3:E3:57'   # SSCI-33
+    '00:17:E9:B3:E4:C8',  # SSCI-26
+    '00:17:E9:BA:AE:97',  # SSCI-27
+    '00:17:EC:02:E7:37',  # SSCI-29
+    '40:BD:32:3B:A6:A0',  # SSCI-32
+    '40:BD:32:3B:A3:81'   # SSCI-33
 ]
 
 # Config params
