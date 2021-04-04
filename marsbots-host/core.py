@@ -43,7 +43,6 @@ class _Robot:
     def __init__(self, rid):
         self.robot = RemoteRobot(rid[1])
         self.robot.connect()
-        self.number = rid[0]
         self.label = rid[2]
         self.taken = False
         self.rescue = False
@@ -81,6 +80,10 @@ def get_valid_robot_numbers():
     for num in _robots:
         nums.append(num)
     return nums
+
+
+def get_robot_label(number):
+    return _robots[number].label
 
 
 def start_game():

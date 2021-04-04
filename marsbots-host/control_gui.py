@@ -52,15 +52,15 @@ def _release_key(number):
     return f'-ROBOT-RELEASE-{number}-'
 
 
-def _robot_pane(number):
+def _robot_pane(number, label):
     layout = [
-        [sg.Button('Connected', key=_connected_key(number), pad=(10, 10)),
+        [sg.Button('Disconnected', key=_connected_key(number), pad=(10, 10)),
          sg.Button('Release', key=_release_key(number), pad=(10, 10), disabled=True)],
         [sg.Column([
             [sg.Button(f'Rescue {number}', size=(15, 1), key=_rescue_key(number), pad=(20, 10), disabled=True)]
         ], justification='center')]
     ]
-    return sg.Frame(f'Robot {number}', layout, border_width=1, pad=(20, 10))
+    return sg.Frame(f'Robot {number}  -  {label}', layout, border_width=1, pad=(20, 10))
 
 
 def _display_game():
@@ -70,7 +70,7 @@ def _display_game():
     panes = []
     row_panes = []
     for num in numbers:
-        row_panes.append(_robot_pane(num))
+        row_panes.append(_robot_pane(num, core.get_robot_label(num)))
         if len(row_panes) == 3:
             panes.append(row_panes)
             row_panes = []
@@ -78,7 +78,7 @@ def _display_game():
         panes.append(row_panes)
 
     layout = [
-        [sg.Text(f"Number of robots: {len(numbers)}", size=(40, 1), justification='left'),
+        [sg.Text(f"Known robots: {len(numbers)}", size=(40, 1), justification='left'),
          sg.Text(f"Public IP: {public_ip}", size=(40, 1), justification='right')],
         [sg.Button('Configure', key=_config_button_key),
          sg.Button('Start', size=(20,1), key=_start_button_key),
@@ -123,8 +123,10 @@ def run_game():
         flash = not flash
         for num in numbers:
             # connected
-            color = ('green', None) if core.get_connected(num) else ('red', None)
-            window[_connected_key(num)].update(button_color=color)
+            connected = core.get_connected(num)
+            color = ('green', None) if connected else ('red', None)
+            text = 'Connected' if connected else 'Disconnected'
+            window[_connected_key(num)].update(text, button_color=color)
             # rescue
             rescue = core.get_rescue(num)
             light = flash and rescue
@@ -133,23 +135,19 @@ def run_game():
             window[_rescue_key(num)].update(button_color=color, disabled=not rescue)
             # release
             window[_release_key(num)].update(disabled=not core.get_taken(num))
+
         if any_rescues:
             sound.alert()
 
         # Wait for window events
-        # timeout allows the Sol timer to update like a clock
+        # timeout allows the Sol timer to update like a clock and the buttons to flash
         event, values = window.read(timeout=500)
         if event == sg.WINDOW_CLOSE_ATTEMPTED_EVENT \
                 and sg.popup_yes_no('Do you really want to exit?', font=('Sans', 18)) == 'Yes':
             break
 
-        # Process any other events
+        # Process any button events
         if event not in (sg.TIMEOUT_EVENT, sg.WIN_CLOSED):
-            # print('============ Event = ', event, ' ==============')
-            # print('-------- Values Dictionary (key=value) --------')
-            # for key in values:
-            #     print(key, ' = ', values[key])
-
             key_split = event.strip('-').split('-')
             if len(key_split) == 3 and key_split[0] == 'ROBOT':
                 button = key_split[1]
