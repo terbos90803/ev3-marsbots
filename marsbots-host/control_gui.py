@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import core
 import get_public_ip
+import sound
 
 
 # configure dialog keys
@@ -16,7 +17,7 @@ _abort_button_key = '-ABORT-'
 _sol_key = '-SOL-MESSAGE-'
 
 
-def configure_game():
+def _configure_game():
     mins, sols, short, long = core.get_game_config()
 
     layout = [
@@ -80,7 +81,7 @@ def _display_game():
         [sg.Text(f"Number of robots: {len(numbers)}", size=(40, 1), justification='left'),
          sg.Text(f"Public IP: {public_ip}", size=(40, 1), justification='right')],
         [sg.Button('Configure', key=_config_button_key),
-         sg.Button('Start', key=_start_button_key),
+         sg.Button('Start', size=(20,1), key=_start_button_key),
          sg.Button('Abort', key=_abort_button_key)],
         [sg.Column([[sg.Text(size=(20, 1), key=_sol_key, font=('Sans', 24), justification='center')]],
                    justification='center')],
@@ -94,7 +95,6 @@ def _display_game():
 
 def run_game():
     window = _display_game()
-    # core.begin_game()
     numbers = core.get_valid_robot_numbers()
 
     flash = False
@@ -119,6 +119,7 @@ def run_game():
         window[_config_button_key].update(disabled=active)
         window[_start_button_key].update(disabled=active)
         window[_abort_button_key].update(disabled=not active)
+        any_rescues = False
         flash = not flash
         for num in numbers:
             # connected
@@ -127,10 +128,13 @@ def run_game():
             # rescue
             rescue = core.get_rescue(num)
             light = flash and rescue
+            any_rescues = any_rescues or light
             color = ('white', 'red') if light else None
             window[_rescue_key(num)].update(button_color=color, disabled=not rescue)
             # release
             window[_release_key(num)].update(disabled=not core.get_taken(num))
+        if any_rescues:
+            sound.alert()
 
         # Wait for window events
         # timeout allows the Sol timer to update like a clock
@@ -160,7 +164,7 @@ def run_game():
                 elif button == 'RESCUE':
                     core.clear_rescue(number)
             elif event == _config_button_key:
-                configure_game()
+                _configure_game()
             elif event == _start_button_key:
                 core.start_game()
             elif event == _abort_button_key:

@@ -70,7 +70,7 @@ def set_game_config(minutes, sols, short_trip, long_trip):
 def assign_available_robot():
     with _lock:
         for num, robot in _robots.items():
-            if not robot.taken:
+            if robot.robot.is_connected() and not robot.taken:
                 robot.taken = True
                 return num
     return None
