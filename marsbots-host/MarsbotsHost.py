@@ -1,9 +1,9 @@
 import threading
+import core
 import api_host
 import control_gui
 
-
-control_gui.setup()
+core.startup()
 
 server = threading.Thread(target=api_host.run_server, daemon=True)
 server.start()

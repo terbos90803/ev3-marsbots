@@ -12,44 +12,36 @@ def home():
 <p>Learn more at <a href="https://sharedscience.org/">Shared Science</a>.</p>'''
 
 
-@app.route('/robots', methods=['GET'])
-def get_valid_robots():
-    first_robot, last_robot = core.get_valid_robots()
-    return {'status': 'ok', 'first_robot': first_robot, 'last_robot': last_robot}
-
-
-@app.route('/robot', methods=['POST'])
-def register_robot():
-    if 'robot' in request.form:
-        robot = int(request.form['robot'])
-        if core.take_robot(robot):
-            return {'status': 'ok'}
-        app.logger.error(f'Duplicate robot registration:{robot}')
-        return {'status': 'fail', 'reason': 'Number already taken'}
+@app.route('/robot_assignment', methods=['GET'])
+def get_robot_assignment():
+    robot_number = core.assign_available_robot()
+    if robot_number:
+        return {'status': 'ok', 'robot_number': robot_number}
     else:
-        app.logger.error('Missing robot id for registration')
-        return {'status': 'fail', 'reason': 'Missing robot id'}
+        return {'status': 'fail', 'message': 'No available robots'}
 
 
 @app.route('/sol', methods=['GET'])
 def get_sol():
-    sol_now, total_sols, mins_per_sol = core.get_sol()
-    return {'status': 'ok', 'sol': sol_now, 'total_sols': total_sols, 'mins_per_sol': mins_per_sol}
+    sol = core.get_sol()
+    if sol:
+        return {'status': 'ok', 'sol': sol[0], 'total_sols': sol[1], 'mins_per_sol': sol[2]}
+    return {'status': 'fail', 'message': 'Game not running'}
 
 
 @app.route('/plan', methods=['POST'])
 def set_plan():
     form_robot = request.form.get('robot')
-    if form_robot is not None:
+    if form_robot:
         robot = int(form_robot)
         plan = request.form.get('plan')
         delay = core.queue_plan(robot, plan)
-        if plan is not None:
+        if plan:
             app.logger.debug(f'plan:{request.form}')
         else:
             app.logger.debug(f'rescue:{request.form}')
         return {'status': 'ok', 'delay': delay}
-    return {'status': 'fail', 'reason': 'Missing robot id'}
+    return {'status': 'fail', 'message': 'Missing robot id'}
 
 
 def run_server():

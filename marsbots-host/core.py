@@ -3,29 +3,33 @@ import time
 
 from remote_robot import RemoteRobot
 
-
-_robot_macs = [
-    '00:17:E9:B3:E3:57',  # SSCI-25
-    '00:17:E9:B3:E4:C8',  # SSCI-26
-    '00:17:E9:BA:AE:97',  # SSCI-27
-    '00:17:EC:02:E7:37',  # SSCI-29
-    '40:BD:32:3B:A6:A0',  # SSCI-32
-    '40:BD:32:3B:A3:81'   # SSCI-33
+# Robot IDs
+# (number, mac, label)
+#  number - Robot Number is the highly legible flag on the robot
+#  mac - Mac address of the EV3's bluetooth
+#  label - Sticker label on the EV3
+_robot_ids = [
+    (1, '00:17:E9:B3:E3:57', 'SSCI-25'),
+    (2, '00:17:E9:B3:E4:C8', 'SSCI-26'),
+    (3, '00:17:E9:BA:AE:97', 'SSCI-27'),
+    (4, '00:17:EC:02:E7:37', 'SSCI-29'),
+    (5, '40:BD:32:3B:A6:A0', 'SSCI-32'),
+    (6, '40:BD:32:3B:A3:81', 'SSCI-33')
 ]
 
 # Config params
-_last_robot = 0
-_game_minutes = 0
-_game_sols = 0
-_short_trip = 0
-_long_trip = 0
-_mins_per_sol = 0
-_delay_scale = 0
+_game_minutes = 30
+_game_sols = 10
+_short_trip = 5
+_long_trip = 20
+_mins_per_sol = 1
+_delay_scale = 1
 
 # Active robots
-_active_robots = []
+_robots = {}
 
 # Game timer
+_game_running = False
 _sol_rt_base = 0.0
 
 # Thread safety
@@ -36,46 +40,77 @@ _queue = []
 
 
 class _Robot:
-    def __init__(self, number):
-        self.robot = RemoteRobot(_robot_macs[number])
+    def __init__(self, rid):
+        self.robot = RemoteRobot(rid[1])
         self.robot.connect()
+        self.number = rid[0]
+        self.label = rid[2]
         self.taken = False
         self.rescue = False
 
 
-def configure(number_robots, minutes, sols, short_trip, long_trip):
-    global _last_robot, _game_minutes, _game_sols, _short_trip, _long_trip, _mins_per_sol, _delay_scale
-    _last_robot = min(number_robots, len(_robot_macs))
+def startup():
+    global _robots
+    for rid in _robot_ids:
+        _robots[rid[0]] = _Robot(rid)
+
+
+def get_game_config():
+    return _game_minutes, _game_sols, _short_trip, _long_trip
+
+
+def set_game_config(minutes, sols, short_trip, long_trip):
+    global _game_minutes, _game_sols, _short_trip, _long_trip, _mins_per_sol, _delay_scale
     _game_minutes = minutes
     _game_sols = sols
     _short_trip = short_trip
     _long_trip = long_trip
 
+
+def assign_available_robot():
+    with _lock:
+        for num, robot in _robots.items():
+            if not robot.taken:
+                robot.taken = True
+                return num
+    return None
+
+
+def get_valid_robot_numbers():
+    nums = []
+    for num in _robots:
+        nums.append(num)
+    return nums
+
+
+def start_game():
+    global _sol_rt_base, _game_running, _queue, _mins_per_sol, _delay_scale
+    _sol_rt_base = time.time()
+    _game_running = True
+    _queue = []
+
     _mins_per_sol = _game_minutes / _game_sols
     delay_range = _long_trip - _short_trip  # delay range in seconds
-    _delay_scale = float(delay_range) / float(_game_minutes * 60)  # scale from game seconds to light delay
+    # scale from game elapsed seconds to current light delay
+    _delay_scale = float(delay_range) / float(_game_minutes * 60)
 
 
-def activate_robots():
-    global _active_robots
-    for ix in range(0, _last_robot):
-        _active_robots.append(_Robot(ix))
+def abort_game():
+    global _game_running
+    _game_running = False
 
 
-def get_valid_robots():
-    return 1, len(_active_robots)
-
-
-def begin_game():
-    global _sol_rt_base
-    _sol_rt_base = time.time()
+def is_game_running():
+    return _game_running
 
 
 def get_sol():
-    # Update the Sol timer
-    mins = (time.time() - _sol_rt_base) / 60.0
-    sol_now = 1 + mins / _mins_per_sol
-    return sol_now, _game_sols, _mins_per_sol
+    if _game_running:
+        # Update the Sol timer
+        mins = (time.time() - _sol_rt_base) / 60.0
+        sol_now = 1 + mins / _mins_per_sol
+        return sol_now, _game_sols, _mins_per_sol
+    return None
 
 
 def get_light_delay():
@@ -85,79 +120,72 @@ def get_light_delay():
 
 
 def get_connected(number):
-    number -= 1
-    return _active_robots[number].robot.is_connected() if number < len(_active_robots) else False
+    robot = _robots.get(number)
+    return robot.robot.is_connected() if robot else False
 
 
 def reconnect(number):
-    number -= 1
-    if number < len(_active_robots):
-        _active_robots[number].robot.connect()
+    robot = _robots.get(number)
+    if robot:
+        robot.robot.connect()
 
 
 def disconnect(number):
-    number -= 1
-    if number < len(_active_robots):
-        _active_robots[number].robot.close()
+    robot = _robots.get(number)
+    if robot:
+        robot.robot.close()
 
 
 def get_rescue(number):
-    number -= 1
-    return _active_robots[number].rescue if number < len(_active_robots) else False
+    robot = _robots.get(number)
+    return robot.rescue if robot else False
 
 
 def set_rescue(number):
-    number -= 1
-    with _lock:
-        if number < len(_active_robots):
-            _active_robots[number].rescue = True
+    robot = _robots.get(number)
+    if robot:
+        with _lock:
+            robot.rescue = True
 
 
 def clear_rescue(number):
-    number -= 1
-    with _lock:
-        if number < len(_active_robots):
-            _active_robots[number].rescue = False
-
-
-def take_robot(number):
-    number -= 1
-    with _lock:
-        if number < len(_active_robots):
-            robot = _active_robots[number]
-            if not robot.taken:
-                robot.taken = True
-                return True
-        return False
+    robot = _robots.get(number)
+    if robot:
+        with _lock:
+            robot.rescue = False
 
 
 def release_robot(number):
-    number -= 1
-    with _lock:
-        if number < len(_active_robots):
-            robot = _active_robots[number]
+    robot = _robots.get(number)
+    if robot:
+        with _lock:
             robot.taken = False
 
 
 def get_taken(number):
-    number -= 1
-    with _lock:
-        if number < len(_active_robots):
-            return _active_robots[number].taken
+    robot = _robots.get(number)
+    if robot:
+        with _lock:
+            return robot.taken
     return False
 
 
 def queue_plan(number, plan):
     global _queue
-    delay = get_light_delay()
-    due = time.time() + delay
-    with _lock:
-        _queue.append((due, number, plan))
-    return delay
+    if _game_running:
+        delay = get_light_delay()
+        due = time.time() + delay
+        with _lock:
+            _queue.append((due, number, plan))
+        return delay
+    return 0
 
 
 def process_queue():
     global _queue
+    if not _game_running:
+        return
+
     now = time.time()
     q = []
     with _lock:
@@ -175,6 +203,6 @@ def process_queue():
 
 
 def _send_plan(number, plan):
-    number -= 1
-    robot = _active_robots[number].robot
-    robot.send_command(plan)
+    robot = _robots.get(number)
+    if robot:
+        robot.robot.send_command(plan)
