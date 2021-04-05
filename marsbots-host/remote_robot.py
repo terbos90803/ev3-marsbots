@@ -14,9 +14,9 @@ class RemoteRobot:
                 self.s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
                 self.s.connect((self.robot_mac_addr, self.port))
                 print('Connected to robot', self.robot_mac_addr)
-            except OSError:
+            except OSError as err:
                 self.s = None
-                print('Failed to open BT connection to', self.robot_mac_addr)
+                print(f'Failed to open BT connection to {self.robot_mac_addr}: {err}')
 
     def is_connected(self):
         return self.s is not None
