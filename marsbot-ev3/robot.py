@@ -8,6 +8,7 @@ import subprocess
 import bluetooth
 import pickle
 import json
+import time
 
 from ev3dev2 import DeviceNotFound
 from ev3dev2.motor import MediumMotor, MoveSteering, SpeedPercent, OUTPUT_A, OUTPUT_B, OUTPUT_C
@@ -30,15 +31,16 @@ grabSpeed = 20
 init_console()
 
 # get handles for the three motors
-try:
-    grabMotor = MediumMotor(OUTPUT_A)
-    steeringDrive = MoveSteering(OUTPUT_B, OUTPUT_C)
-except DeviceNotFound as error:
-    print("Motor not connected")
-    print("Check and restart")
-    print(error)
-    while True:
-        pass
+while True:
+    try:
+        grabMotor = MediumMotor(OUTPUT_A)
+        steeringDrive = MoveSteering(OUTPUT_B, OUTPUT_C)
+        break
+    except DeviceNotFound as error:
+        print("Motor not connected")
+        print("Check and restart")
+        print(error)
+        time.sleep(1)
 
 
 def move(value):
@@ -47,7 +49,7 @@ def move(value):
 
 def turn(value):
     steering = -100 if value < 0 else 100
-    steeringDrive.on_for_rotations(steering, turnSpeed, 0.6 * abs(value))
+    steeringDrive.on_for_rotations(steering, turnSpeed, 0.4925 * abs(value))
 
 
 def grab():
