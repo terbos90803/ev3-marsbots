@@ -14,7 +14,8 @@ def home():
 
 @app.route('/robot_assignment', methods=['GET'])
 def get_robot_assignment():
-    robot_number = core.assign_available_robot()
+    name = request.args.get('name')
+    robot_number = core.assign_available_robot(name)
     if robot_number:
         return {'status': 'ok', 'robot_number': robot_number}
     else:

@@ -16,7 +16,7 @@ class RemoteRobot:
                 print('Connected to robot', self.robot_mac_addr)
             except OSError as err:
                 self.s = None
-                print(f'Failed to open BT connection to {self.robot_mac_addr}: {err}')
+                print(f'Failed to open BT connection to {self.robot_mac_addr}: {repr(err)}')
 
     def is_connected(self):
         return self.s is not None

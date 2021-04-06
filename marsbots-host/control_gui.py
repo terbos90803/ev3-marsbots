@@ -4,40 +4,17 @@ import get_public_ip
 import sound
 
 
-# configure dialog keys
+# configure frame keys
+_config_frame_key = '-CONFIGURE-'
 _how_many_minutes_key = '-HOW-MANY-MINUTES-'
 _how_many_sols_key = '-HOW-MANY-SOLS-'
 _short_trip_time_key = '-SHORT_TRIP-TIME-'
 _long_trip_time_key = '-LONG-TRIP-TIME-'
 
 # main window keys
-_config_button_key = '-CONFIGURE-'
 _start_button_key = '-START-'
 _abort_button_key = '-ABORT-'
 _sol_key = '-SOL-MESSAGE-'
-
-
-def _configure_game():
-    mins, sols, short, long = core.get_game_config()
-
-    layout = [
-        [sg.Text("Minutes in game"), sg.Input(size=(5, 1), key=_how_many_minutes_key, default_text=mins)],
-        [sg.Text("Sols in game"), sg.Input(size=(5, 1), key=_how_many_sols_key, default_text=sols)],
-        [sg.Text("Short trip time (sec)"), sg.Input(size=(5, 1), key=_short_trip_time_key, default_text=short)],
-        [sg.Text("Long trip time (sec)"), sg.Input(size=(5, 1), key=_long_trip_time_key, default_text=long)],
-        [sg.Button('Ok', bind_return_key=True)]
-    ]
-    window = sg.Window('Configure the Game', layout, font=('Sans', 14), modal=True, finalize=True)
-    event, values = window.read()
-    window.close()
-
-    if event == 'Ok':
-        core.set_game_config(
-            int(values[_how_many_minutes_key]),
-            int(values[_how_many_sols_key]),
-            int(values[_short_trip_time_key]),
-            int(values[_long_trip_time_key])
-        )
 
 
 def _connected_key(number):
@@ -52,10 +29,15 @@ def _release_key(number):
     return f'-ROBOT-RELEASE-{number}-'
 
 
+def _last_ping_key(number):
+    return f'-ROBOT-PING-{number}-'
+
+
 def _robot_pane(number, label):
     layout = [
         [sg.Button('Disconnected', key=_connected_key(number), pad=(10, 10)),
-         sg.Button('Release', key=_release_key(number), pad=(10, 10), disabled=True)],
+         sg.Button('Available', key=_release_key(number), pad=(10, 10), disabled=True)],
+        [sg.Text(size=(20, 1), key=_last_ping_key(number))],
         [sg.Column([
             [sg.Button(f'Rescue {number}', size=(15, 1), key=_rescue_key(number), pad=(20, 10), disabled=True)]
         ], justification='center')]
@@ -66,6 +48,7 @@ def _robot_pane(number, label):
 def _display_game():
     numbers = core.get_valid_robot_numbers()
     public_ip = get_public_ip.get_public_ip()
+    mins, sols, short, long = core.get_game_config()
 
     panes = []
     row_panes = []
@@ -77,11 +60,17 @@ def _display_game():
     if len(row_panes) > 0:
         panes.append(row_panes)
 
+    config_layout = [
+        [sg.Text("Minutes in game"), sg.Input(size=(5, 1), key=_how_many_minutes_key, default_text=mins)],
+        [sg.Text("Sols in game"), sg.Input(size=(5, 1), key=_how_many_sols_key, default_text=sols)],
+        [sg.Text("Short trip time (sec)"), sg.Input(size=(5, 1), key=_short_trip_time_key, default_text=short)],
+        [sg.Text("Long trip time (sec)"), sg.Input(size=(5, 1), key=_long_trip_time_key, default_text=long)]
+    ]
     layout = [
         [sg.Text(f"Known robots: {len(numbers)}", size=(40, 1), justification='left'),
          sg.Text(f"Public IP: {public_ip}", size=(40, 1), justification='right')],
-        [sg.Button('Configure', key=_config_button_key),
-         sg.Button('Start', size=(20,1), key=_start_button_key),
+        [sg.Frame('Game Configuration', config_layout, key=_config_frame_key, border_width=1, pad=(20, 10))],
+        [sg.Button('Start', size=(20, 1), key=_start_button_key),
          sg.Button('Abort', key=_abort_button_key)],
         [sg.Column([[sg.Text(size=(20, 1), key=_sol_key, font=('Sans', 24), justification='center')]],
                    justification='center')],
@@ -110,13 +99,13 @@ def run_game():
         if active:
             sol_now, sol_total, mins_per_sol = core.get_sol()
             if sol_now > sol_total + 1:
-                break
+                core.abort_game()
             window[_sol_key].update(f'Sol {sol_now:.1f} of {sol_total:.0f}', visible=True)
         else:
             window[_sol_key].update(visible=False)
 
         # Manage Button states
-        window[_config_button_key].update(disabled=active)
+        window[_config_frame_key].update(visible=not active)
         window[_start_button_key].update(disabled=active)
         window[_abort_button_key].update(disabled=not active)
         any_rescues = False
@@ -127,14 +116,21 @@ def run_game():
             color = ('green', None) if connected else ('red', None)
             text = 'Connected' if connected else 'Disconnected'
             window[_connected_key(num)].update(text, button_color=color)
+            # release
+            name = core.get_player_name(num)
+            available = not core.get_taken(num)
+            text = 'Available' if available else name if name else 'Release'
+            window[_release_key(num)].update(text, disabled=available)
+            # last ping
+            last_ping = core.get_last_ping(num)
+            text = f'Last ping (sec): {last_ping:.0f}' if last_ping and not available else ''
+            window[_last_ping_key(num)].update(text)
             # rescue
             rescue = core.get_rescue(num)
             light = flash and rescue
             any_rescues = any_rescues or light
             color = ('white', 'red') if light else None
             window[_rescue_key(num)].update(button_color=color, disabled=not rescue)
-            # release
-            window[_release_key(num)].update(disabled=not core.get_taken(num))
 
         if any_rescues:
             sound.alert()
@@ -161,9 +157,13 @@ def run_game():
                     core.release_robot(number)
                 elif button == 'RESCUE':
                     core.clear_rescue(number)
-            elif event == _config_button_key:
-                _configure_game()
             elif event == _start_button_key:
+                core.set_game_config(
+                    int(values[_how_many_minutes_key]),
+                    int(values[_how_many_sols_key]),
+                    int(values[_short_trip_time_key]),
+                    int(values[_long_trip_time_key])
+                )
                 core.start_game()
             elif event == _abort_button_key:
                 core.abort_game()

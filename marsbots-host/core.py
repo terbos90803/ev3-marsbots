@@ -44,8 +44,10 @@ class _Robot:
         self.robot = RemoteRobot(rid[1])
         self.robot.connect()
         self.label = rid[2]
+        self.name = None
         self.taken = False
         self.rescue = False
+        self.last_ping = time.time()
 
 
 def startup():
@@ -66,11 +68,13 @@ def set_game_config(minutes, sols, short_trip, long_trip):
     _long_trip = long_trip
 
 
-def assign_available_robot():
+def assign_available_robot(name):
     with _lock:
         for num, robot in _robots.items():
-            if robot.robot.is_connected() and not robot.taken:
+            if not robot.taken and robot.robot.is_connected():
                 robot.taken = True
+                robot.name = name
+                robot.last_ping = time.time()
                 return num
     return None
 
@@ -84,6 +88,10 @@ def get_valid_robot_numbers():
 
 def get_robot_label(number):
     return _robots[number].label
+
+
+def get_player_name(number):
+    return _robots[number].name
 
 
 def start_game():
@@ -173,8 +181,24 @@ def get_taken(number):
     return False
 
 
+def get_last_ping(number):
+    robot = _robots.get(number)
+    if robot:
+        with _lock:
+            return time.time() - robot.last_ping
+    return None
+
+
+def _ping(number):
+    robot = _robots.get(number)
+    if robot:
+        with _lock:
+            robot.last_ping = time.time()
+
+
 def queue_plan(number, plan):
     global _queue
+    _ping(number)
     if _game_running:
         delay = get_light_delay()
         due = time.time() + delay
@@ -196,6 +220,7 @@ def process_queue():
             q.append(_queue.pop(0))
 
     # We have quickly moved the due elements from the global queue to the local one
+    # Now we can execute the plan while not holding the lock
     for e in q:
         number = e[1]
         plan = e[2]
