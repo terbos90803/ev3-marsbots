@@ -61,10 +61,13 @@ def _display_game():
         panes.append(row_panes)
 
     config_layout = [
-        [sg.Text("Minutes in game"), sg.Input(size=(5, 1), key=_how_many_minutes_key, default_text=mins)],
-        [sg.Text("Sols in game"), sg.Input(size=(5, 1), key=_how_many_sols_key, default_text=sols)],
-        [sg.Text("Short trip time (sec)"), sg.Input(size=(5, 1), key=_short_trip_time_key, default_text=short)],
-        [sg.Text("Long trip time (sec)"), sg.Input(size=(5, 1), key=_long_trip_time_key, default_text=long)]
+        [sg.Column([
+            [sg.Text("Minutes in game"), sg.Input(size=(5, 1), key=_how_many_minutes_key, default_text=mins)],
+            [sg.Text("Sols in game"), sg.Input(size=(5, 1), key=_how_many_sols_key, default_text=sols)]
+        ]), sg.Column([
+            [sg.Text("Short trip time (sec)"), sg.Input(size=(5, 1), key=_short_trip_time_key, default_text=short)],
+            [sg.Text("Long trip time (sec)"), sg.Input(size=(5, 1), key=_long_trip_time_key, default_text=long)]
+        ])]
     ]
     layout = [
         [sg.Text(f"Known robots: {len(numbers)}", size=(40, 1), justification='left'),
