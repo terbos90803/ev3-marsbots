@@ -31,10 +31,12 @@ grabSpeed = 20
 init_console()
 
 # get handles for the three motors
+grabMotor = None
+steeringDrive = None
 while True:
     try:
-        grabMotor = MediumMotor(OUTPUT_A)
-        steeringDrive = MoveSteering(OUTPUT_B, OUTPUT_C)
+        grabMotor = grabMotor if grabMotor else MediumMotor(OUTPUT_A)
+        steeringDrive = steeringDrive if steeringDrive else MoveSteering(OUTPUT_B, OUTPUT_C)
         break
     except DeviceNotFound as error:
         print("Motor not connected")
