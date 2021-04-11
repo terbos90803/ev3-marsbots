@@ -1,7 +1,7 @@
 import threading
 import time
 
-from remote_robot import RemoteRobot
+from remote_robot import BluetoothRobot
 
 # Robot IDs
 # (number, mac, label)
@@ -41,7 +41,7 @@ _queue = []
 
 class _Robot:
     def __init__(self, rid):
-        self.robot = RemoteRobot(rid[1])
+        self.robot = BluetoothRobot(rid[1])
         self.robot.connect()
         self.label = rid[2]
         self.name = None

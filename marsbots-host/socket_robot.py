@@ -1,8 +1,8 @@
-import bluetooth
+import socket
 import pickle
 
 
-class BluetoothRobot:
+class SocketRobot:
     def __init__(self, robot_mac_addr):
         self.robot_mac_addr = robot_mac_addr
         self.port = 3  # port number is arbitrary, but must match between server and client
