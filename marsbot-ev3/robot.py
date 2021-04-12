@@ -26,7 +26,7 @@ RELEASE = 'Release'
 
 driveSpeed = 35
 turnSpeed = 35
-grabSpeed = 20
+grabSpeed = 40
 
 init_console()
 
@@ -51,15 +51,21 @@ def move(value):
 
 def turn(value):
     steering = -100 if value < 0 else 100
-    steeringDrive.on_for_rotations(steering, turnSpeed, 0.4925 * abs(value))
+    steeringDrive.on_for_rotations(steering, turnSpeed, 0.4925 * value)
 
 
 def grab():
-    grabMotor.on_for_seconds(speed=-grabSpeed, seconds=1.5, brake=False)
+    grabMotor.duty_cycle_sp = -grabSpeed
+    grabMotor.run_direct()
+    grabMotor.wait_until_not_moving()
+    grabMotor.stop()
 
 
 def release():
-    grabMotor.on_for_seconds(speed=grabSpeed, seconds=1.5, brake=False)
+    grabMotor.duty_cycle_sp = grabSpeed
+    grabMotor.run_direct()
+    grabMotor.wait_until_not_moving()
+    grabMotor.stop()
 
 
 leds = Leds()

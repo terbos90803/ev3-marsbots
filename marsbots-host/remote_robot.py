@@ -32,7 +32,7 @@ class RemoteRobot:
         if self.s is not None:
             data = pickle.dumps(command, protocol=3)
             try:
-                self.s.send(data)
+                self.s.sendall(data)
             except OSError:
                 self.s = None
                 print('Robot disconnected', self.robot_mac_addr)
