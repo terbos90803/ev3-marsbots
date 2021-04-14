@@ -27,6 +27,7 @@ RELEASE = 'Release'
 driveSpeed = 35
 turnSpeed = 35
 grabSpeed = 40
+holdSpeed = 10
 
 init_console()
 
@@ -44,6 +45,8 @@ while True:
         print(error)
         time.sleep(1)
 
+#print('stop actions:', grabMotor.stop_actions, file=sys.stderr)
+
 
 def move(value):
     steeringDrive.on_for_rotations(0, driveSpeed, 1.0 * value)
@@ -57,13 +60,16 @@ def turn(value):
 def grab():
     grabMotor.duty_cycle_sp = -grabSpeed
     grabMotor.run_direct()
+    time.sleep(0.1)
     grabMotor.wait_until_not_moving()
-    grabMotor.stop()
+    grabMotor.duty_cycle_sp = -holdSpeed
 
 
 def release():
+    grabMotor.stop_action = 'coast'
     grabMotor.duty_cycle_sp = grabSpeed
     grabMotor.run_direct()
+    time.sleep(0.1)
     grabMotor.wait_until_not_moving()
     grabMotor.stop()
 
