@@ -1,7 +1,8 @@
 import threading
 import time
 
-from remote_robot import BluetoothRobot
+from bt_robot import BluetoothRobot
+from tcp_robot import TcpRobot
 
 # Robot IDs
 # (number, mac, label)
@@ -9,12 +10,12 @@ from remote_robot import BluetoothRobot
 #  mac - Mac address of the EV3's bluetooth
 #  label - Sticker label on the EV3
 _robot_ids = [
-    (1, '00:17:E9:B3:E3:57', 'SSCI-25'),
-    (2, '00:17:E9:B3:E4:C8', 'SSCI-26'),
-    (3, '00:17:E9:BA:AE:97', 'SSCI-27'),
-    (4, '00:17:EC:02:E7:37', 'SSCI-29'),
-    (5, '40:BD:32:3B:A6:A0', 'SSCI-32'),
-    (6, '40:BD:32:3B:A3:81', 'SSCI-33')
+    {'id': 1, 'name': 'SSCI-25', 'ip': '192.168.0.125', 'btmac': '00:17:E9:B3:E3:57'},
+    {'id': 2, 'name': 'SSCI-26', 'ip': '127.0.0.1', 'btmac': '00:17:E9:B3:E4:C8'},
+    {'id': 3, 'name': 'SSCI-27', 'ip': '127.0.0.1', 'btmac': '00:17:E9:BA:AE:97'},
+    {'id': 4, 'name': 'SSCI-29', 'ip': '127.0.0.1', 'btmac': '00:17:EC:02:E7:37'},
+    {'id': 5, 'name': 'SSCI-32', 'ip': '127.0.0.1', 'btmac': '40:BD:32:3B:A6:A0'},
+    {'id': 6, 'name': 'SSCI-33', 'ip': '127.0.0.1', 'btmac': '40:BD:32:3B:A3:81'}
 ]
 
 # Config params
@@ -41,9 +42,13 @@ _queue = []
 
 class _Robot:
     def __init__(self, rid):
-        self.robot = BluetoothRobot(rid[1])
-        self.robot.connect()
-        self.label = rid[2]
+        robot = TcpRobot(rid['ip'])
+        robot.connect()
+        if not robot.is_connected():
+            robot = BluetoothRobot(rid['btmac'])
+            robot.connect()
+        self.robot = robot
+        self.label = rid['name']
         self.name = None
         self.taken = False
         self.rescue = False
@@ -53,7 +58,7 @@ class _Robot:
 def startup():
     global _robots
     for rid in _robot_ids:
-        _robots[rid[0]] = _Robot(rid)
+        _robots[rid['id']] = _Robot(rid)
 
 
 def get_game_config():

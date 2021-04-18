@@ -3,9 +3,7 @@
 SSCI SoccerBot robot server
 """
 
-import sys
-import subprocess
-import bluetooth
+import remote
 import pickle
 import json
 import time
@@ -45,7 +43,7 @@ while True:
         print(error)
         time.sleep(1)
 
-#print('stop actions:', grabMotor.stop_actions, file=sys.stderr)
+#debug_print('stop actions:', grabMotor.stop_actions)
 
 
 def move(value):
@@ -83,55 +81,44 @@ display = Display()
 screenw = display.xres
 screenh = display.yres
 
-# Fetch BT MAC address automatically
-cmd = "hciconfig"
-device_id = "hci0"
-sp_result = subprocess.run(cmd, stdout=subprocess.PIPE, universal_newlines=True)
-hostMACAddress = sp_result.stdout.split("{}:".format(device_id))[1].split("BD Address: ")[1].split(" ")[0].strip()
-debug_print (hostMACAddress)
-print (hostMACAddress)
-
 # reset the grab motor to a known good position
 release()
 
-port = 3  # port number is arbitrary, but must match between server and client
-backlog = 1
-size = 1024
-s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-s.bind((hostMACAddress, port))
-s.listen(backlog)
+# Create connection to server
+s, host_address = remote.get_listener_socket()
 
 # Main loop handles connections to the host
 while True:
     try:
         reset_console()
-        print (hostMACAddress)
+        print (host_address)
         leds.set_color('LEFT', 'AMBER')
         leds.set_color('RIGHT', 'AMBER')
 
         client, clientInfo = s.accept()
         print ('Connected')
+        debug_print('Connected to:', clientInfo)
         leds.set_color('LEFT', 'GREEN')
         leds.set_color('RIGHT', 'GREEN')
 
         # Driving loop
         while True:
-            data = client.recv(size)
+            data = client.recv(remote.size)
             if data:
-                #print(data, file=sys.stderr)
-                #print(pickle.DEFAULT_PROTOCOL, file=sys.stderr)
+                #debug_print(data)
+                #debug_print(pickle.DEFAULT_PROTOCOL)
                 jd = pickle.loads(data)
                 sequence = json.loads(jd)
 
                 # command format: [[cmd, value], ...]
-                #print(sequence, file=sys.stderr)
+                #debug_print(sequence)
                 if isinstance(sequence, list):
                     for step in sequence:
-                        #print(step, file=sys.stderr)
+                        #debug_print(step)
                         cmd = step[0]
-                        #print(cmd, file=sys.stderr)
+                        #debug_print(cmd)
                         value = float(step[1]) if len(step) > 1 else 0.0
-                        #print(value, file=sys.stderr)
+                        #debug_print(value)
                         if cmd == FORWARD:
                             move(value)
                         elif cmd == REVERSE:
