@@ -43,7 +43,8 @@ while True:
         print(error)
         time.sleep(1)
 
-#debug_print('stop actions:', grabMotor.stop_actions)
+debug_print('stop actions:', grabMotor.stop_actions)
+debug_print('pickle.HIGHEST_PROTOCOL:', pickle.HIGHEST_PROTOCOL)
 
 
 def move(value):
@@ -94,8 +95,10 @@ while True:
         print (host_address)
         leds.set_color('LEFT', 'AMBER')
         leds.set_color('RIGHT', 'AMBER')
+        debug_print('Waiting for connection')
 
         client, clientInfo = s.accept()
+        client.settimeout(10)
         print ('Connected')
         debug_print('Connected to:', clientInfo)
         leds.set_color('LEFT', 'GREEN')
@@ -104,10 +107,18 @@ while True:
         # Driving loop
         while True:
             data = client.recv(remote.size)
+            #debug_print('recv:', data)
+            if data == b'':
+                client.close()
+                break
+
             if data:
                 #debug_print(data)
-                #debug_print(pickle.DEFAULT_PROTOCOL)
                 jd = pickle.loads(data)
+                #debug_print(jd)
+                if jd == 'ping':
+                    continue
+
                 sequence = json.loads(jd)
 
                 # command format: [[cmd, value], ...]

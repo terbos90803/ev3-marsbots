@@ -145,6 +145,9 @@ def run_game():
                 and sg.popup_yes_no('Do you really want to exit?', font=('Sans', 18)) == 'Yes':
             break
 
+        # Keep robots alive
+        core.ping_robots()
+
         # Process any button events
         if event not in (sg.TIMEOUT_EVENT, sg.WIN_CLOSED):
             key_split = event.strip('-').split('-')

@@ -1,8 +1,7 @@
 import threading
 import time
 
-from bt_robot import BluetoothRobot
-from tcp_robot import TcpRobot
+from remote_robot import RemoteRobot
 
 # Robot IDs
 # (number, mac, label)
@@ -11,11 +10,11 @@ from tcp_robot import TcpRobot
 #  label - Sticker label on the EV3
 _robot_ids = [
     {'id': 1, 'name': 'SSCI-25', 'ip': '192.168.0.125', 'btmac': '00:17:E9:B3:E3:57'},
-    {'id': 2, 'name': 'SSCI-26', 'ip': '127.0.0.1', 'btmac': '00:17:E9:B3:E4:C8'},
-    {'id': 3, 'name': 'SSCI-27', 'ip': '127.0.0.1', 'btmac': '00:17:E9:BA:AE:97'},
-    {'id': 4, 'name': 'SSCI-29', 'ip': '127.0.0.1', 'btmac': '00:17:EC:02:E7:37'},
-    {'id': 5, 'name': 'SSCI-32', 'ip': '127.0.0.1', 'btmac': '40:BD:32:3B:A6:A0'},
-    {'id': 6, 'name': 'SSCI-33', 'ip': '127.0.0.1', 'btmac': '40:BD:32:3B:A3:81'}
+    {'id': 2, 'name': 'SSCI-26', 'ip': None, 'btmac': '00:17:E9:B3:E4:C8'},
+    {'id': 3, 'name': 'SSCI-27', 'ip': None, 'btmac': '00:17:E9:BA:AE:97'},
+    {'id': 4, 'name': 'SSCI-29', 'ip': None, 'btmac': '00:17:EC:02:E7:37'},
+    {'id': 5, 'name': 'SSCI-32', 'ip': None, 'btmac': '40:BD:32:3B:A6:A0'},
+    {'id': 6, 'name': 'SSCI-33', 'ip': None, 'btmac': '40:BD:32:3B:A3:81'}
 ]
 
 # Config params
@@ -42,12 +41,8 @@ _queue = []
 
 class _Robot:
     def __init__(self, rid):
-        robot = TcpRobot(rid['ip'])
-        robot.connect()
-        if not robot.is_connected():
-            robot = BluetoothRobot(rid['btmac'])
-            robot.connect()
-        self.robot = robot
+        self.robot = RemoteRobot(rid)
+        self.robot.connect()
         self.label = rid['name']
         self.name = None
         self.taken = False
@@ -59,6 +54,11 @@ def startup():
     global _robots
     for rid in _robot_ids:
         _robots[rid['id']] = _Robot(rid)
+
+
+def shutdown():
+    for r in _robots.values():
+        r.robot.close()
 
 
 def get_game_config():
@@ -150,6 +150,11 @@ def disconnect(number):
     robot = _robots.get(number)
     if robot:
         robot.robot.close()
+
+
+def ping_robots():
+    for r in _robots.values():
+        r.robot.send_command('ping')
 
 
 def get_rescue(number):
