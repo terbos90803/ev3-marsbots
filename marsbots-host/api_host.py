@@ -1,7 +1,9 @@
 import flask
 from flask import request
 import core
+import threading
 
+_api_server = None
 app = flask.Flask("MarsbotsServer")
 # app.config["DEBUG"] = True
 
@@ -45,5 +47,11 @@ def set_plan():
     return {'status': 'fail', 'message': 'Missing robot id'}
 
 
-def run_server():
+def _run_server():
     app.run(host="0.0.0.0")
+
+
+def start():
+    global _api_server
+    _api_server = threading.Thread(target=_run_server, daemon=True)
+    _api_server.start()

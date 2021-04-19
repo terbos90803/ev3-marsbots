@@ -1,13 +1,13 @@
-import threading
 import core
+import ad_monitor
 import api_host
 import control_gui
 
 core.startup()
 
-# Start REST api server
-api_server = threading.Thread(target=api_host.run_server, daemon=True)
-api_server.start()
+# Start server threads
+api_host.start()
+ad_monitor.start()
 
 control_gui.run_game()
 

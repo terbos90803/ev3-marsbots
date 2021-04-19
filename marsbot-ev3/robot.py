@@ -87,6 +87,7 @@ release()
 
 # Create connection to server
 s, host_address = remote.get_listener_socket()
+s.settimeout(5)
 
 # Main loop handles connections to the host
 while True:
@@ -96,8 +97,13 @@ while True:
         leds.set_color('LEFT', 'AMBER')
         leds.set_color('RIGHT', 'AMBER')
         debug_print('Waiting for connection')
+        remote.advertise()
 
-        client, clientInfo = s.accept()
+        try:
+            client, clientInfo = s.accept()
+        except:
+            continue
+
         client.settimeout(10)
         print ('Connected')
         debug_print('Connected to:', clientInfo)

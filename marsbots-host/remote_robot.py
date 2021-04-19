@@ -9,7 +9,7 @@ _tcp_port = 32390  # port number is arbitrary, but must match between server and
 
 class RemoteRobot:
     def __init__(self, robot_info):
-        self.robot_ip_addr = robot_info['ip']
+        self.robot_ip_addr = None
         self.robot_mac_addr = robot_info['btmac']
         self.s = None
 
@@ -36,6 +36,9 @@ class RemoteRobot:
 
     def is_connected(self):
         return self.s is not None
+
+    def set_ip(self, addr):
+        self.robot_ip_addr = addr
 
     def close(self):
         if self.s is not None:

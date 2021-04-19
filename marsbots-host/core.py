@@ -9,12 +9,12 @@ from remote_robot import RemoteRobot
 #  mac - Mac address of the EV3's bluetooth
 #  label - Sticker label on the EV3
 _robot_ids = [
-    {'id': 1, 'name': 'SSCI-25', 'ip': '192.168.0.125', 'btmac': '00:17:E9:B3:E3:57'},
-    {'id': 2, 'name': 'SSCI-26', 'ip': None, 'btmac': '00:17:E9:B3:E4:C8'},
-    {'id': 3, 'name': 'SSCI-27', 'ip': None, 'btmac': '00:17:E9:BA:AE:97'},
-    {'id': 4, 'name': 'SSCI-29', 'ip': None, 'btmac': '00:17:EC:02:E7:37'},
-    {'id': 5, 'name': 'SSCI-32', 'ip': None, 'btmac': '40:BD:32:3B:A6:A0'},
-    {'id': 6, 'name': 'SSCI-33', 'ip': None, 'btmac': '40:BD:32:3B:A3:81'}
+    {'id': 1, 'name': 'ev3dev-ssci-25', 'btmac': '00:17:E9:B3:E3:57'},
+    {'id': 2, 'name': 'ev3dev-ssci-26', 'btmac': '00:17:E9:B3:E4:C8'},
+    {'id': 3, 'name': 'ev3dev-ssci-27', 'btmac': '00:17:E9:BA:AE:97'},
+    {'id': 4, 'name': 'ev3dev-ssci-29', 'btmac': '00:17:EC:02:E7:37'},
+    {'id': 5, 'name': 'ev3dev-ssci-32', 'btmac': '40:BD:32:3B:A6:A0'},
+    {'id': 6, 'name': 'ev3dev-ssci-33', 'btmac': '40:BD:32:3B:A3:81'}
 ]
 
 # Config params
@@ -42,7 +42,7 @@ _queue = []
 class _Robot:
     def __init__(self, rid):
         self.robot = RemoteRobot(rid)
-        self.robot.connect()
+        # self.robot.connect()
         self.label = rid['name']
         self.name = None
         self.taken = False
@@ -71,6 +71,14 @@ def set_game_config(minutes, sols, short_trip, long_trip):
     _game_sols = sols
     _short_trip = short_trip
     _long_trip = long_trip
+
+
+def found_robot(name, ip):
+    with _lock:
+        for rid in _robot_ids:
+            if rid['name'] == name:
+                _robots[rid['id']].robot.set_ip(ip)
+                break
 
 
 def assign_available_robot(name):
