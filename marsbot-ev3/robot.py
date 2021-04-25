@@ -52,8 +52,7 @@ def move(value):
 
 
 def turn(value):
-    steering = -100 if value < 0 else 100
-    steeringDrive.on_for_rotations(steering, turnSpeed, 0.4925 * value)
+    steeringDrive.on_for_rotations(100, turnSpeed, 0.4925 * value)
 
 
 def grab():
