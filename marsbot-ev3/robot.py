@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SSCI SoccerBot robot server
+SSCI MarsBot robot server
 """
 
 import remote
