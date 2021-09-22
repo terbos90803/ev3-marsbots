@@ -42,7 +42,6 @@ _queue = []
 class _Robot:
     def __init__(self, rid):
         self.robot = RemoteRobot(rid)
-        # self.robot.connect()
         self.label = rid['name']
         self.name = None
         self.taken = False
