@@ -4,10 +4,9 @@ import time
 from remote_robot import RemoteRobot
 
 # Robot IDs
-# (number, mac, label)
-#  number - Robot Number is the highly legible flag on the robot
-#  mac - Mac address of the EV3's bluetooth
-#  label - Sticker label on the EV3
+#  id - Robot Number is the highly legible flag on the robot
+#  btmac - Mac address of the EV3's bluetooth
+#  name - Sticker label on the EV3
 _robot_ids = [
     {'id': 1, 'name': 'ev3dev-ssci-25', 'btmac': '00:17:E9:B3:E3:57'},
     {'id': 2, 'name': 'ev3dev-ssci-26', 'btmac': '00:17:E9:B3:E4:C8'},
