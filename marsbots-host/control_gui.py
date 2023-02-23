@@ -88,6 +88,7 @@ def _display_game():
 def run_game():
     window = _display_game()
     numbers = core.get_valid_robot_numbers()
+    def_color = sg.Button().ButtonColor
 
     flash = False
 
@@ -132,7 +133,7 @@ def run_game():
             rescue = core.get_rescue(num)
             light = flash and rescue
             any_rescues = any_rescues or light
-            color = ('white', 'red') if light else None
+            color = ('white', 'red') if light else def_color
             window[_rescue_key(num)].update(button_color=color, disabled=not rescue)
 
         if any_rescues:
