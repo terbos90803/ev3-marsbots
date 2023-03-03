@@ -1,7 +1,14 @@
 import threading
 import time
 
-from remote_robot import RemoteRobot
+import os
+
+if 'MOCK_ROBOT' in os.environ and bool(os.environ['MOCK_ROBOT']):
+    from mock_robot import MockRobot
+    RobotClass = MockRobot
+else:
+    from remote_robot import RemoteRobot
+    RobotClass = RemoteRobot
 
 # Robot IDs
 #  id - Robot Number is the highly legible flag on the robot
@@ -40,7 +47,7 @@ _queue = []
 
 class _Robot:
     def __init__(self, rid):
-        self.robot = RemoteRobot(rid)
+        self.robot = RobotClass(rid)
         self.label = rid['name']
         self.name = None
         self.taken = False
