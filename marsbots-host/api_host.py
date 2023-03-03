@@ -14,7 +14,7 @@ def home():
 <p>Learn more at <a href="https://sharedscience.org/">Shared Science</a>.</p>'''
 
 
-@app.route('/robot_assignment', methods=['GET'])
+@app.route('/api/robot_assignment', methods=['GET'])
 def get_robot_assignment():
     name = request.args.get('name')
     robot_number = core.assign_available_robot(name)
@@ -24,7 +24,7 @@ def get_robot_assignment():
         return {'status': 'fail', 'message': 'No available robots'}
 
 
-@app.route('/sol', methods=['GET'])
+@app.route('/api/sol', methods=['GET'])
 def get_sol():
     sol = core.get_sol()
     if sol:
@@ -32,7 +32,7 @@ def get_sol():
     return {'status': 'fail', 'message': 'Game not running'}
 
 
-@app.route('/plan', methods=['POST'])
+@app.route('/api/plan', methods=['POST'])
 def set_plan():
     form_robot = request.form.get('robot')
     if form_robot:
