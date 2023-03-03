@@ -32,7 +32,10 @@ _mins_per_sol = 1
 _delay_scale = 1
 
 # Active robots
-_robots = {}
+_robots: 'dict[str,_Robot]' = {}
+
+# Map users to their assigned robot
+_user_robots: 'dict[_User,str]' = {}
 
 # Game timer
 _game_running = False
@@ -45,11 +48,25 @@ _lock = threading.Lock()
 _queue = []
 
 
+class _User:
+    def __init__(self, clientId: str, name: str):
+        self.clientId = clientId
+        self.name = name
+
+    def __hash__(self):
+        return hash((self.clientId, self.name))
+
+    def __eq__(self, other):
+        return (self.clientId, self.name) == (other.clientId, other.name)
+
+    def __ne__(self, other):
+        return not (self == other)
+
 class _Robot:
     def __init__(self, rid):
         self.robot = RobotClass(rid)
         self.label = rid['name']
-        self.name = None
+        self.user: _User = None
         self.taken = False
         self.rescue = False
         self.last_ping = time.time()
@@ -86,14 +103,23 @@ def found_robot(name, ip):
                 break
 
 
-def assign_available_robot(name):
+def get_user_robot(name: str, clientId: str):
     with _lock:
-        for num, robot in _robots.items():
+        user = _User(clientId, name)
+        if user in _user_robots:
+            robotId = _user_robots[user]
+            _robots[robotId].last_ping = time.time()
+            return robotId
+
+        for robotId, robot in _robots.items():
             if not robot.taken and robot.robot.is_connected():
                 robot.taken = True
-                robot.name = name
+                robot.user = user
                 robot.last_ping = time.time()
-                return num
+
+                _user_robots[user] = robotId
+
+                return robotId
     return None
 
 
@@ -109,7 +135,11 @@ def get_robot_label(number):
 
 
 def get_player_name(number):
-    return _robots[number].name
+    robot = _robots[number]
+    if robot.user:
+        return robot.user.name
+    else:
+        return None
 
 
 def start_game():
@@ -193,6 +223,8 @@ def release_robot(number):
     robot = _robots.get(number)
     if robot:
         with _lock:
+            del _user_robots[robot.user]
+            robot.user = None
             robot.taken = False
 
 

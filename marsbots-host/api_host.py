@@ -13,11 +13,14 @@ def home():
     return '''<h1>Shared Science Marsbot Adventure</h1>
 <p>Learn more at <a href="https://sharedscience.org/">Shared Science</a>.</p>'''
 
-
 @app.route('/api/robot_assignment', methods=['GET'])
 def get_robot_assignment():
     name = request.args.get('name')
-    robot_number = core.assign_available_robot(name)
+    clientId = request.args.get('clientId')
+    if not name or not clientId:
+        return {'status': 'fail', 'message': 'Bad request'}
+
+    robot_number = core.get_user_robot(name, clientId)
     if robot_number:
         return {'status': 'ok', 'robot_number': robot_number}
     else:
