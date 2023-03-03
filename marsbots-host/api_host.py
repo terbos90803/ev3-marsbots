@@ -26,6 +26,11 @@ def get_robot_assignment():
     else:
         return {'status': 'fail', 'message': 'No available robots'}
 
+@app.route('/api/game_state', methods=['GET'])
+def get_game_state():
+    game_running, game_id = core.get_game_state()
+    return {'status': 'ok', 'game_running': game_running, 'game_id': game_id}
+
 
 @app.route('/api/sol', methods=['GET'])
 def get_sol():

@@ -1,5 +1,6 @@
 import threading
 import time
+import uuid
 
 import os
 
@@ -39,6 +40,7 @@ _user_robots: 'dict[_User,str]' = {}
 
 # Game timer
 _game_running = False
+_game_id: str = uuid.uuid1()
 _sol_rt_base = 0.0
 
 # Thread safety
@@ -142,6 +144,9 @@ def get_player_name(number):
         return None
 
 
+def get_game_state():
+    return (_game_running, _game_id)
+
 def start_game():
     global _sol_rt_base, _game_running, _queue, _mins_per_sol, _delay_scale
     _sol_rt_base = time.time()
@@ -155,8 +160,9 @@ def start_game():
 
 
 def abort_game():
-    global _game_running
+    global _game_running, _game_id
     _game_running = False
+    _game_id = uuid.uuid1()
 
 
 def is_game_running():
