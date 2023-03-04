@@ -164,6 +164,8 @@ def abort_game():
     _game_running = False
     _game_id = uuid.uuid1()
 
+    release_all_robots()
+
 
 def is_game_running():
     return _game_running
@@ -233,6 +235,16 @@ def release_robot(number):
             robot.user = None
             robot.taken = False
 
+def release_all_robots():
+    with _lock:
+        rids = list(_user_robots.values())
+        for rid in rids:
+            robot = _robots.get(rid)
+            if not robot:
+                continue
+            del _user_robots[robot.user]
+            robot.user = None
+            robot.taken = False
 
 def get_taken(number):
     robot = _robots.get(number)
