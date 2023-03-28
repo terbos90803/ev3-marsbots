@@ -13,18 +13,26 @@ def home():
     return '''<h1>Shared Science Marsbot Adventure</h1>
 <p>Learn more at <a href="https://sharedscience.org/">Shared Science</a>.</p>'''
 
-
-@app.route('/robot_assignment', methods=['GET'])
+@app.route('/api/robot_assignment', methods=['GET'])
 def get_robot_assignment():
     name = request.args.get('name')
-    robot_number = core.assign_available_robot(name)
+    clientId = request.args.get('clientId')
+    if not name or not clientId:
+        return {'status': 'fail', 'message': 'Bad request'}
+
+    robot_number = core.get_user_robot(name, clientId)
     if robot_number:
         return {'status': 'ok', 'robot_number': robot_number}
     else:
         return {'status': 'fail', 'message': 'No available robots'}
 
+@app.route('/api/game_state', methods=['GET'])
+def get_game_state():
+    game_running, game_id = core.get_game_state()
+    return {'status': 'ok', 'game_running': game_running, 'game_id': game_id}
 
-@app.route('/sol', methods=['GET'])
+
+@app.route('/api/sol', methods=['GET'])
 def get_sol():
     sol = core.get_sol()
     if sol:
@@ -32,7 +40,7 @@ def get_sol():
     return {'status': 'fail', 'message': 'Game not running'}
 
 
-@app.route('/plan', methods=['POST'])
+@app.route('/api/plan', methods=['POST'])
 def set_plan():
     form_robot = request.form.get('robot')
     if form_robot:
