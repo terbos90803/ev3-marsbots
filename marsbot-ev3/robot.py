@@ -57,19 +57,23 @@ def turn(value):
 
 def grab():
     grabMotor.duty_cycle_sp = -grabSpeed
+    debug_print('grabbing')
     grabMotor.run_direct()
-    time.sleep(0.1)
+    time.sleep(0.2)
     grabMotor.wait_until_not_moving()
     grabMotor.duty_cycle_sp = -holdSpeed
+    debug_print('grabbed')
 
 
 def release():
     grabMotor.stop_action = 'coast'
     grabMotor.duty_cycle_sp = grabSpeed
+    debug_print('releasing', grabMotor)
     grabMotor.run_direct()
-    time.sleep(0.1)
+    time.sleep(0.2)
     grabMotor.wait_until_not_moving()
     grabMotor.stop()
+    debug_print('released')
 
 
 leds = Leds()
