@@ -1,0 +1,5 @@
+simpleaudio
+pysimplegui==4.*
+flask
+requests
+
