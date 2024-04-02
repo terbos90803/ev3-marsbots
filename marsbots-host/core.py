@@ -35,8 +35,12 @@ _delay_scale = 1
 # Active robots
 _robots: 'dict[str,_Robot]' = {}
 
-# Map users to their assigned robot
-_user_robots: 'dict[_User,str]' = {}
+# Map clients to their assigned robot
+_client_robots: 'dict[str,str]' = {}
+
+_client_pings: 'dict[str, float]' = {}
+
+_known_clients: 'set[str]' = set()
 
 # Game timer
 _game_running = False
@@ -50,29 +54,13 @@ _lock = threading.Lock()
 _queue = []
 
 
-class _User:
-    def __init__(self, clientId: str, name: str):
-        self.clientId = clientId
-        self.name = name
-
-    def __hash__(self):
-        return hash((self.clientId, self.name))
-
-    def __eq__(self, other):
-        return (self.clientId, self.name) == (other.clientId, other.name)
-
-    def __ne__(self, other):
-        return not (self == other)
-
 class _Robot:
     def __init__(self, rid):
         self.robot = RobotClass(rid)
         self.label = rid['name']
-        self.user: _User = None
+        self.client: str = None
         self.taken = False
         self.rescue = False
-        self.last_ping = time.time()
-
 
 def startup():
     global _robots
@@ -105,25 +93,22 @@ def found_robot(name, ip):
                 break
 
 
-def get_user_robot(name: str, clientId: str):
+def get_user_robot(clientId: str):
+    _client_pings[clientId] = time.time()
     with _lock:
-        user = _User(clientId, name)
-        if user in _user_robots:
-            robotId = _user_robots[user]
-            _robots[robotId].last_ping = time.time()
+        if clientId in _client_robots:
+            robotId = _client_robots[clientId]
             return robotId
 
-        for robotId, robot in _robots.items():
-            if not robot.taken and robot.robot.is_connected():
-                robot.taken = True
-                robot.user = user
-                robot.last_ping = time.time()
-
-                _user_robots[user] = robotId
-
-                return robotId
+        # No robot assigned yet, enter the waitlist
+        if clientId not in _known_clients:
+            _known_clients.add(clientId)
+            return None
     return None
 
+def get_known_clients() -> 'list[str]':
+    with _lock:
+        return list(_known_clients)
 
 def get_valid_robot_numbers():
     nums = []
@@ -138,8 +123,8 @@ def get_robot_label(number):
 
 def get_player_name(number):
     robot = _robots[number]
-    if robot.user:
-        return robot.user.name
+    if robot in _client_robots:
+        return _client_robots[robot]
     else:
         return None
 
@@ -163,8 +148,6 @@ def abort_game():
     global _game_running, _game_id
     _game_running = False
     _game_id = uuid.uuid1()
-
-    release_all_robots()
 
 
 def is_game_running():
@@ -227,24 +210,47 @@ def clear_rescue(number):
             robot.rescue = False
 
 
+def assign_robot(robotId: str, clientId: str):
+    robot = _robots.get(robotId)
+    if robot:
+        with _lock:
+            if robot.taken:
+                print(f"Cannot assign robot {robotId} as it is already assigned")
+                return
+            if clientId in _client_robots:
+                print(f"Cannot assign robot to client {clientId} as a robot is already assigned to this client")
+                return
+            robot.taken = True
+            robot.client = clientId
+            _client_robots[clientId] = robotId
+
+def release_robot_from_client(client):
+    robotId = _client_robots.get(client)
+    if robotId:
+        with _lock:
+            del _client_robots[client]
+            robot = _robots[robotId]
+            robot.taken = False
+            robot.client = None
+
 def release_robot(number):
     robot = _robots.get(number)
     if robot:
         with _lock:
-            del _user_robots[robot.user]
-            robot.user = None
+            del _client_robots[robot.client]
             robot.taken = False
+            robot.client = None
 
 def release_all_robots():
     with _lock:
-        rids = list(_user_robots.values())
+        rids = list(_client_robots.values())
         for rid in rids:
             robot = _robots.get(rid)
             if not robot:
                 continue
-            del _user_robots[robot.user]
-            robot.user = None
+            del _client_robots[robot.client]
             robot.taken = False
+            robot.client = None
 
 def get_taken(number):
     robot = _robots.get(number)
@@ -253,25 +259,14 @@ def get_taken(number):
             return robot.taken
     return False
 
-
-def get_last_ping(number):
-    robot = _robots.get(number)
-    if robot:
-        with _lock:
-            return time.time() - robot.last_ping
-    return None
-
-
-def _ping(number):
-    robot = _robots.get(number)
-    if robot:
-        with _lock:
-            robot.last_ping = time.time()
-
+def get_last_client_ping(clientId):
+    if clientId in _client_pings:
+        return time.time() - _client_pings[clientId]
+    else:
+        return None
 
 def queue_plan(number, plan):
     global _queue
-    _ping(number)
     if _game_running:
         delay = get_light_delay()
         due = time.time() + delay
@@ -280,6 +275,8 @@ def queue_plan(number, plan):
         return delay
     return 0
 
+def update_ping(clientId):
+    _client_pings[clientId] = time.time()
 
 def process_queue():
     global _queue

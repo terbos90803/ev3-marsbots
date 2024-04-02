@@ -16,6 +16,8 @@ _start_button_key = '-START-'
 _abort_button_key = '-ABORT-'
 _sol_key = '-SOL-MESSAGE-'
 
+# robot assignment keys
+_client_frame_key = '-CLIENTS-FRAME'
 
 def _connected_key(number):
     return f'-ROBOT-CONNECTED-{number}-'
@@ -24,41 +26,49 @@ def _connected_key(number):
 def _rescue_key(number):
     return f'-ROBOT-RESCUE-{number}-'
 
+def _robot_assign_key(clientId: str) -> str:
+    return f'-CLIENTS-ASSIGN-{clientId}'
 
-def _release_key(number):
-    return f'-ROBOT-RELEASE-{number}-'
+def _client_ping_key(clientId: str) -> str:
+    return f'-CLIENTS-PING-{clientId}'
 
-
-def _last_ping_key(number):
-    return f'-ROBOT-PING-{number}-'
-
+def _parse_robot_assign_key(robot_assign_key: str) -> str:
+    return robot_assign_key[len('-CLIENTS-ASSIGN-'):]
 
 def _robot_pane(number, label):
     layout = [
-        [sg.Button('Disconnected', key=_connected_key(number), pad=(10, 10)),
-         sg.Button('Available', key=_release_key(number), pad=(10, 10), disabled=True)],
-        [sg.Text(size=(20, 1), key=_last_ping_key(number))],
-        [sg.Column([
-            [sg.Button(f'Rescue {number}', size=(15, 1), key=_rescue_key(number), pad=(20, 10), disabled=True)]
-        ], justification='center')]
+        [sg.Button('Disconnected', key=_connected_key(number), pad=(10, 10))],
+        [sg.Button(f'Rescue {number}', size=(15, 1), key=_rescue_key(number), pad=(20, 10), disabled=True)]
     ]
-    return sg.Frame(f'Robot {number}  -  {label}', layout, border_width=1, pad=(20, 10))
+    return sg.Frame(f'Robot {number}  -  {label}', layout, border_width=1, pad=(20, 10), element_justification='center')
 
+def _robot_id_to_str(id: int) -> str:
+    return f'Robot {id}'
+
+def _robot_id_from_str(formatted: str) -> int:
+    return int(formatted[len('Robot '):])
+
+def _client_row(clientId: str, robots: 'list[int]'):
+    return [[
+        sg.Text(clientId, size=(40, 1)),
+        sg.Text("Last ping (sec): ???", size=(20, 1), key=_client_ping_key(clientId)),
+        sg.Combo(['NONE'] + [_robot_id_to_str(robot) for robot in robots], default_value='NONE', readonly=True, key=_robot_assign_key(clientId), enable_events=True)
+    ]]
 
 def _display_game():
     numbers = core.get_valid_robot_numbers()
     public_ip = get_public_ip.get_public_ip()
     mins, sols, short, long = core.get_game_config()
 
-    panes = []
+    robot_panes = []
     row_panes = []
     for num in numbers:
         row_panes.append(_robot_pane(num, core.get_robot_label(num)))
         if len(row_panes) == 3:
-            panes.append(row_panes)
+            robot_panes.append(row_panes)
             row_panes = []
     if len(row_panes) > 0:
-        panes.append(row_panes)
+        robot_panes.append(row_panes)
 
     config_layout = [
         [sg.Column([
@@ -69,6 +79,7 @@ def _display_game():
             [sg.Text("Long trip time (sec)"), sg.Input(size=(5, 1), key=_long_trip_time_key, default_text=long)]
         ])]
     ]
+
     layout = [
         [sg.Text(f"Known robots: {len(numbers)}", size=(40, 1), justification='left'),
          sg.Text(f"Public IP: {public_ip}", size=(40, 1), justification='right')],
@@ -77,8 +88,8 @@ def _display_game():
          sg.Button('Abort', key=_abort_button_key)],
         [sg.Column([[sg.Text(size=(20, 1), key=_sol_key, font=('Sans', 24), justification='center')]],
                    justification='center')],
-
-        [sg.Column(panes, justification='center')]
+        [sg.Column(robot_panes, justification='center')],
+        [sg.Frame('Clients', [[]], key=_client_frame_key, border_width=1, pad=(20, 10))]
     ]
     window = sg.Window('Shared Science Mars Adventure', layout, font=('Sans', 14),
                        enable_close_attempted_event=True, finalize=True)
@@ -91,6 +102,8 @@ def run_game():
     def_color = sg.Button().ButtonColor
 
     flash = False
+
+    registered_clients: 'set[str]' = set()
 
     running = True
     while running:
@@ -120,15 +133,6 @@ def run_game():
             color = ('green', None) if connected else ('red', None)
             text = 'Connected' if connected else 'Disconnected'
             window[_connected_key(num)].update(text, button_color=color)
-            # release
-            name = core.get_player_name(num)
-            available = not core.get_taken(num)
-            text = 'Available' if available else name if name else 'Release'
-            window[_release_key(num)].update(text, disabled=available)
-            # last ping
-            last_ping = core.get_last_ping(num)
-            text = f'Last ping (sec): {last_ping:.0f}' if last_ping and not available else ''
-            window[_last_ping_key(num)].update(text)
             # rescue
             rescue = core.get_rescue(num)
             light = flash and rescue
@@ -138,6 +142,17 @@ def run_game():
 
         if any_rescues:
             sound.alert()
+
+        # Manage robot assignment
+        clients = core.get_known_clients()
+        for client in clients:
+            if client not in registered_clients:
+                window.extend_layout(window[_client_frame_key], _client_row(client, numbers))
+                registered_clients.add(client)
+
+            last_ping = core.get_last_client_ping(client)
+            text = f'Last ping (sec): {last_ping:.1f}' if last_ping else 'Last ping (sec): N/A'
+            window[_client_ping_key(client)].update(text)
 
         # Wait for window events
         # timeout allows the Sol timer to update like a clock and the buttons to flash
@@ -174,5 +189,13 @@ def run_game():
                 core.start_game()
             elif event == _abort_button_key:
                 core.abort_game()
+            elif len(key_split) > 2 and key_split[0] == 'CLIENTS' and key_split[1] == 'ASSIGN':
+                client = _parse_robot_assign_key(event)
+                value = values[event]
+                if value == 'NONE':
+                    core.release_robot_from_client(client)
+                else:
+                    robot = _robot_id_from_str(value)
+                    core.assign_robot(robot, client)
 
     window.close()
