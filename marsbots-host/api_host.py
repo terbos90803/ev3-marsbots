@@ -15,20 +15,24 @@ def home():
 
 @app.route('/api/robot_assignment', methods=['GET'])
 def get_robot_assignment():
-    name = request.args.get('name')
     clientId = request.args.get('clientId')
-    if not name or not clientId:
+    if not clientId:
         return {'status': 'fail', 'message': 'Bad request'}
 
-    robot_number = core.get_user_robot(name, clientId)
+    robot_number = core.get_user_robot(clientId)
     if robot_number:
         return {'status': 'ok', 'robot_number': robot_number}
     else:
-        return {'status': 'fail', 'message': 'No available robots'}
+        return {'status': 'fail', 'message': 'No robot assigned'}
 
 @app.route('/api/game_state', methods=['GET'])
 def get_game_state():
     game_running, game_id = core.get_game_state()
+
+    clientId = request.args.get('clientId')
+    if clientId:
+        core.update_ping(clientId)
+
     return {'status': 'ok', 'game_running': game_running, 'game_id': game_id}
 
 
