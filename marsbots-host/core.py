@@ -33,7 +33,7 @@ _mins_per_sol = 1
 _delay_scale = 1
 
 # Active robots
-_robots: 'dict[str,_Robot]' = {}
+_robots: 'dict[int,_Robot]' = {}
 
 # Map users to their assigned robot
 _user_robots: 'dict[_User,str]' = {}
@@ -104,6 +104,14 @@ def found_robot(name, ip):
                 _robots[rid['id']].robot.set_ip(ip)
                 break
 
+client_robot_map: 'dict[str, int]' = {
+    'a57f3b90': 1,
+    '573f5780': 2,
+    '58f45a80': 3,
+    '6d147bd0': 4,
+    'e390a040': 5,
+    '8cd6d300': 6
+}
 
 def get_user_robot(name: str, clientId: str):
     with _lock:
@@ -113,16 +121,19 @@ def get_user_robot(name: str, clientId: str):
             _robots[robotId].last_ping = time.time()
             return robotId
 
-        for robotId, robot in _robots.items():
-            if not robot.taken and robot.robot.is_connected():
-                robot.taken = True
-                robot.user = user
-                robot.last_ping = time.time()
+        if clientId[:8] not in client_robot_map:
+            return None
 
-                _user_robots[user] = robotId
+        robotId = client_robot_map[clientId[:8]]
+        robot = _robots[robotId]
 
-                return robotId
-    return None
+        robot.taken = True
+        robot.user = user
+        robot.last_ping = time.time()
+
+        _user_robots[user] = robotId
+
+        return robotId
 
 
 def get_valid_robot_numbers():
