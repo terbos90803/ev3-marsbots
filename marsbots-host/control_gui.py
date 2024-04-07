@@ -91,7 +91,7 @@ def _display_game():
         [sg.Column(robot_panes, justification='center')],
         [sg.Frame('Clients', [[]], key=_client_frame_key, border_width=1, pad=(20, 10))]
     ]
-    window = sg.Window('Shared Science Mars Adventure', layout, font=('Sans', 14),
+    window = sg.Window('Shared Science Mars Adventure', layout, font=('Sans', 10),
                        enable_close_attempted_event=True, finalize=True)
     return window
 
