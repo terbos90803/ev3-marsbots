@@ -1,5 +1,4 @@
-simpleaudio
-pysimplegui==4.*
+simpleaudio @ git+https://github.com/cexen/py-simple-audio@6a7cb95
+FreeSimpleGUI==5.*
 flask
 requests
-
